@@ -19,63 +19,72 @@ class EventTransition(Enum):
     EXCEEDANCE = 2,
     NONE = 0
 
-class PseudoRandomNumberQueue(object):   
+class PseudoRandomNumberQueue(object):       
+    '''
+    PseudoRandomNumberQueue
     
-    '''
     Helper class to generate and retrieve multiple random numbers to and from a deque.
-    @param initSize - The per-repopulation size. 
     '''
+
     def __init__(self, initSize):
-        self.seed_size = initSize
-        self.rnd_num = deque()
+        self.__seed_size = initSize
+        self.__rnd_num = deque()
 
     def __del__(self):
         pass
     
     def repopulate(self) -> None:
-        self.rnd_num.extend(np.random.rand(self.seed_size).tolist())
+
+        self.__rnd_num.extend(np.random.rand(self.__seed_size).tolist())
     
     def fetch(self) -> float:
         '''
-        Pops a random number.
-        If the deque is empty, initializes it based on @param initSize.
+        fetch
+        
+        Pops a random number from the deque.
+        
+
+        Returns
+        -------
+        float
+            Random number
         '''
-        if(not self.rnd_num):
+        if(not self.__rnd_num):
             self.repopulate()    
 
-        return self.rnd_num.pop()
+        return self.__rnd_num.pop()
 
 class BaselBase(gym.Env):
     '''
+    
+    BaselBase(gym.Env)
+    
     Base class for creating a Basel environment.
     Contains the basic functionality and behaviour associated with said object.
     Note however, that despite having the full behavior, it relies on overriden
     methods by its children to operate, hence, class-extension is required.
 
-    All deriving classes must implement:
-        * _getActionValue()
-
     '''
 
     def __init__(self, config):
-        self._obs: np.ndarray = None
+        self.__obs: np.ndarray = None
     
         # User Configuration Section
         self.defaultMultiplierIndex = config.get("initial_multiplier_index", None)
-        self._useRandomEC: bool = config.get("use_random_ec", None)
+        self.__useRandomEC: bool = config.get("use_random_ec", None)
 
         # Basel Configuration Section
-        self._confidenceLevel: float = 0.99
-        self._normalMean: float = 0
-        self._normalStdDev: float = 1
-        self._EC_Max: int = 11
-        self._kMultipliersListing = np.array([3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, np.inf])
+        self.__confidenceLevel: float = 0.99
+        self.__normalMean: float = 0
+        self.__normalStdDev: float = 1
+        self.__EC_Max: int = 11
+        self.__kMultipliersListing = np.array([3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, np.inf])
 
-        self._normalVaR: float = norm.ppf(self._confidenceLevel, self._normalMean, self._normalStdDev)
-        self._normalVaR10: float = - self._normalVaR * sqrt(10)
+        self.__normalVaR: float = norm.ppf(self.__confidenceLevel, self.__normalMean, self.__normalStdDev)
+        self.__normalVaR10: float = - self.__normalVaR * sqrt(10)
 
         # Observation Variables
-        self._action_value : float = 0.0
+        self.__action_value : float = 0.0
         
         # Gym Configuration Section
         self.seed()
@@ -84,7 +93,7 @@ class BaselBase(gym.Env):
         self.state = None
         self.steps_beyond_done = None
 
-        self._rndGenerator = PseudoRandomNumberQueue(10000000)
+        self.__rndGenerator = PseudoRandomNumberQueue(10000000)
 
     def seed(self, seed = None):
         self.np_random, seed = seeding.np_random(seed)
@@ -107,7 +116,7 @@ class BaselBase(gym.Env):
 
     def _computeReward(self) -> float:
         return -1 if self._isBankrupt() else (
-                self.action_value * self._kMultipliersListing[self.state[2]] * self._normalVaR10)
+                self.action_value * self.__kMultipliersListing[self.state[2]] * self.__normalVaR10)
 
     def _updateEnvironment(self) -> None:
         state = self.state
@@ -120,13 +129,13 @@ class BaselBase(gym.Env):
             transitioned_event = self._getTransitionedEvent(ttob == 1)
 
             if (transitioned_event == EventTransition.EXCEEDANCE):
-                ec_number = min(ec_number + 1, self._EC_Max)
+                ec_number = min(ec_number + 1, self.__EC_Max)
             elif (transitioned_event == EventTransition.BANKRUPTCY):
-                ec_number = self._EC_Max
+                ec_number = self.__EC_Max
                 k_mul = 7
 
-        if (ec_number == self._EC_Max):
-            k_mul = len(self._kMultipliersListing) - 1
+        if (ec_number == self.__EC_Max):
+            k_mul = len(self.__kMultipliersListing) - 1
         elif (ttob == 1):
             k_mul = 0 if ec_number <= 4 else ec_number - 4
 
@@ -149,11 +158,11 @@ class BaselBase(gym.Env):
 
     @property
     def defaultMultiplierIndex(self) -> int:
-        return self._defaultMultiplierIndex
+        return self.__defaultMultiplierIndex
 
     @defaultMultiplierIndex.setter
     def defaultMultiplierIndex(self, mulValue: int) -> None:
-        self._defaultMultiplierIndex = mulValue
+        self.__defaultMultiplierIndex = mulValue
 
 class RewardScaler(gym.RewardWrapper):
 
