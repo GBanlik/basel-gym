@@ -2,9 +2,9 @@
 
 Basel environment in accordance to the OpenAI Gym format to be solved with RL.
 
-The environment seeks optimizing the following equation:
+The environment seeks optimizing x, the disclosed value as a percentage of VaR, in the following equation:
 
-![grc](https://latex.codecogs.com/gif.latex?GRC_t%20%3Dmax%28k%5Cfrac%7B1%7D%7B60%7D%5Csum%5E%7B59%7D_%7Bi%3D0%7DVaR_%7B1%2C0.01%2Ct-i%7D%5Csqrt%7B10%7D%2CVaR_%7B1%2C0.01%2C%20t%7D%5Csqrt%7B10%7D%29 "GRC")
+![grc](https://latex.codecogs.com/gif.latex?GRC_t%20%3D%5Cmax%20%7Bk%5Cfrac%7B1%7D%7B60%7D%7B%5Csum_%7Bi%3D0%7D%5E%7B59%7D%7DxVaR_%7B1%2C%200.01%2C%20t%7D%2C%20xVaR_%7B1%2C%200.01%2C%20t%7D%5Csqrt%7B10%7D%7D "GRC")
 
 
 | Environment | Action Space | State Space |
