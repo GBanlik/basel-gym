@@ -56,10 +56,7 @@ class SimulationProfile(object):
         return self.__monitor
 
     def _validateArgs(self, dist: SimulationDistribution, monitor: SimulationMonitor):
-        valid = not dist is None and not monitor is None
-        valid = issubclass(dict, SimulationDistribution) and issubclass(monitor, SimulationMonitor)
-
-        return valid
+        return not dist is None and not monitor is None and issubclass(dict, SimulationDistribution) and issubclass(monitor, SimulationMonitor)
 
 class MonteCarloSimulator(object):
     '''Runs Monte Carlo simulations on SimulationProfile instances. 
