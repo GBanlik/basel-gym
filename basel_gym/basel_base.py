@@ -67,24 +67,25 @@ class BaselBase(gym.Env):
     '''
 
     def __init__(self, config):
-        self.__obs: np.ndarray = None
-    
+        self._obs: np.ndarray = None
+
         # User Configuration Section
         self.defaultMultiplierIndex = config.get("initial_multiplier_index", None)
-        self.__useRandomEC: bool = config.get("use_random_ec", None)
+        self._useRandomEC: bool = config.get("use_random_ec", None)
 
         # Basel Configuration Section
-        self.__confidenceLevel: float = 0.99
-        self.__normalMean: float = 0
-        self.__normalStdDev: float = 1
-        self.__EC_Max: int = 11
-        self.__kMultipliersListing = np.array([3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, np.inf])
+        self._confidenceLevel: float = 0.99
+        self._normalMean: float = 0
+        self._normalStdDev: float = 1
+        self._EC_Max: int = 11
 
-        self.__normalVaR: float = norm.ppf(self.__confidenceLevel, self.__normalMean, self.__normalStdDev)
-        self.__normalVaR10: float = - self.__normalVaR * sqrt(10)
+        self._kMultipliersListing = np.array([3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, np.inf])
+
+        self._normalVaR: float = norm.ppf(self._confidenceLevel, self._normalMean, self._normalStdDev)
+        self._normalVaR10: float = - self._normalVaR * sqrt(10)
 
         # Observation Variables
-        self.__action_value : float = 0.0
+        self._action_value : float = 0.0
         
         # Gym Configuration Section
         self.seed()
@@ -93,7 +94,7 @@ class BaselBase(gym.Env):
         self.state = None
         self.steps_beyond_done = None
 
-        self.__rndGenerator = PseudoRandomNumberQueue(10000000)
+        self._rndGenerator = PseudoRandomNumberQueue(10000000)
 
     def seed(self, seed = None):
         self.np_random, seed = seeding.np_random(seed)
@@ -116,7 +117,7 @@ class BaselBase(gym.Env):
 
     def _computeReward(self) -> float:
         return -1 if self._isBankrupt() else (
-                self.action_value * self.__kMultipliersListing[self.state[2]] * self.__normalVaR10)
+                self.action_value * self._kMultipliersListing[self.state[2]] * self._normalVaR10)
 
     def _updateEnvironment(self) -> None:
         state = self.state
@@ -129,13 +130,13 @@ class BaselBase(gym.Env):
             transitioned_event = self._getTransitionedEvent(ttob == 1)
 
             if (transitioned_event == EventTransition.EXCEEDANCE):
-                ec_number = min(ec_number + 1, self.__EC_Max)
+                ec_number = min(ec_number + 1, self._EC_Max)
             elif (transitioned_event == EventTransition.BANKRUPTCY):
-                ec_number = self.__EC_Max
+                ec_number = self._EC_Max
                 k_mul = 7
 
-        if (ec_number == self.__EC_Max):
-            k_mul = len(self.__kMultipliersListing) - 1
+        if (ec_number == self._EC_Max):
+            k_mul = len(self._kMultipliersListing) - 1
         elif (ttob == 1):
             k_mul = 0 if ec_number <= 4 else ec_number - 4
 
@@ -158,11 +159,11 @@ class BaselBase(gym.Env):
 
     @property
     def defaultMultiplierIndex(self) -> int:
-        return self.__defaultMultiplierIndex
+        return self._defaultMultiplierIndex
 
     @defaultMultiplierIndex.setter
     def defaultMultiplierIndex(self, mulValue: int) -> None:
-        self.__defaultMultiplierIndex = mulValue
+        self._defaultMultiplierIndex = mulValue
 
 class RewardScaler(gym.RewardWrapper):
 

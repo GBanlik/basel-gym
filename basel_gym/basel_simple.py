@@ -6,7 +6,7 @@ from basel_base import EventTransition
 from gym import spaces
 
 from scipy.stats import norm
-from scipy.special import ndr
+from scipy.special import ndtr
 import numpy as np
 
 class BaselSimple(BaselBase):
@@ -19,32 +19,32 @@ class BaselSimple(BaselBase):
         super().__init__(config)
 
         self.action_space = spaces.Discrete(3000)
-        self.observation_space = spaces.MultiDiscrete([250, (self.__EC_Max + 1), len(self._kMultipliersListing)])
+        self.observation_space = spaces.MultiDiscrete([250, (self._EC_Max + 1), len(self._kMultipliersListing)])
 
     def _getActionValue(self, action: float) -> float:
         return action * 0.001
 
     def _computeReward(self) -> float:
         return -1 if self._isBankrupt() else 0.00001 * (
-                self.action_value * self.__kMultipliersListing[self.state[2]] * self.__normalVaR10)
+                self.action_value * self._kMultipliersListing[self.state[2]] * self._normalVaR10)
     
     def _isBankrupt(self) -> bool:
-        return self.state[2] == (len(self.__kMultipliersListing) - 1)
+        return self.state[2] == (len(self._kMultipliersListing) - 1)
 
 
     def reset(self):
-        current_kmul_index = self.__defaultMultiplierIndex if self.defaultMultiplierIndex != None else self.np_random.randint(
-            0, len(self.__kMultipliersListing) - 1)
+        current_kmul_index = self.defaultMultiplierIndex if self.defaultMultiplierIndex != None else self.np_random.randint(
+            0, len(self._kMultipliersListing) - 1)
 
-        initialECs = self.np_random.randint(0, self._EC_Max - 1) if self.__useRandomEC else 0
+        initialECs = self.np_random.randint(0, self._EC_Max - 1) if self._useRandomEC else 0
         self.state = (250 - initialECs, initialECs , current_kmul_index)
-
+        
         return self._get_obs()
 
     def _generateProbabilities(self) -> (float, float, float, float):
         reportedValue = self.action_value * self._normalVaR
         # 400, not having an exceedence; 100+i, not going bankrupt with one day left to backtesting
-        probNoEC, probNB = ndr([reportedValue,  reportedValue * self.__kMultipliersListing[self.state[2]] * sqrt(10)], loc=self.__normalMean, scale=self.__normalStdDev)
+        probNoEC, probNB = ndtr([reportedValue,  reportedValue * self._kMultipliersListing[self.state[2]] * sqrt(10)])
         # 200+i, having an EC and going bankrupt
         probBC = 1 - probNB
         # 300+i, having an EC and not going BC
@@ -57,7 +57,7 @@ class BaselSimple(BaselBase):
             return EventTransition.NONE
 
         probNoEC, probNB, probBC, probECNoBC = self._generateProbabilities()
-        rndProb: np.ndarray[float] = self.___rndGenerator.fetch()
+        rndProb: np.ndarray[float] = self._rndGenerator.fetch()
         
         transition_event: EventTransition = None
 
