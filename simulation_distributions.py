@@ -1,60 +1,70 @@
-from typing import Callable, Tuple
+from typing import Callable
+from utils.utils_decorators import inputDecorators
 
 import numpy as np
 
-class SimulationDistribution(object):
+class SimulationDistributionBase(object):
     '''Base class for a custom distribution to be used by MonteCarloSimulator instances.
     '''
-
+    
     def __init__(self, config={}):
-        self.__dist = None
+        self._dist: np.ndarray = config.get("distribution_function", None)
 
-        
     def validate(self) -> bool:
-        return not self.__dist is None
-        
+        return not self._dist is None
+
     @property
-    def distributionFunction(self, dist):
+    def distributionFunction(self) -> np.ndarray:
         '''Retrieves the underlying distribution function for the instance.
         
         Returns
         -------
-        np.nparray[]
+        np.nparray
             for DiscreteSimulationDistribution objects
-        Callable[[np.ndarray[float]], float]
+        Callable[[np.ndarray], float]
             for ContinuousSimulationDistribution objects
         '''
-
-        return self.__dist
+        return self._dist
 
     @distributionFunction.setter 
-    def distributionFunction(self, distribution, dims_vec: np.ndarray):
+    def distributionFunction(self, distribution) -> None:
         raise NotImplementedError
 
     def getAction(self, observation: np.ndarray) -> float:
         raise NotImplementedError
     
 
-class DiscreteSimulationDistribution(SimulationDistribution):
+class DiscreteSimulationDistribution(SimulationDistributionBase):
 
     def __init__(self, config={}):
         super().__init__(config)
 
-    @SimulationDistribution.distributionFunction.setter 
-    def distributionFunction(self, dist: np.ndarray):
-        self.__dist = dist.tolist()
+    @property
+    def distributionFunction(self) -> np.ndarray:
+        return super().distributionFunction
 
+    @distributionFunction.setter 
+    @inputDecorators.non_null
+    def distributionFunction(self, distribution: np.ndarray) -> None:
+        self._dist = distribution.ravel()
+
+    @inputDecorators.non_null
     def getAction(self, observation: np.ndarray) -> float:
-        # time np.tolist()(index1, index2, ...) < np.item(index1, index2, ...) < np[index1, index2, ...] < np.[index1][index2][]...]
-        return self.__dist.item(observation.ravel())
+        return self.distributionFunction[observation]
 
-class ContinuousSimulationDistribution(SimulationDistribution):
+class ContinuousSimulationDistribution(SimulationDistributionBase):
     def __init__(self, config={}):
-        super.__init__(config)
+        super().__init__(config)
 
-    @SimulationDistribution.distributionFunction.setter 
-    def distributionFunction(self, dist: Callable[[np.ndarray], float]):
-        self.__dist = dist
+    @property
+    def distributionFunction(self) -> np.ndarray:
+        return super().distributionFunction
 
+    @distributionFunction.setter 
+    @inputDecorators.non_null
+    def distributionFunction(self, distribution: Callable[[np.ndarray], float]) -> None:
+        super(DiscreteSimulationDistribution, self.__class__).distributionFunction.fset(self, distribution)
+
+    @inputDecorators.non_null
     def getAction(self, observation: np.ndarray) -> float:
-        return self.__dist(observation)
+        return self._dist(observation)
