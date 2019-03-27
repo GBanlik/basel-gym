@@ -1,6 +1,6 @@
 import unittest
 
-from simulation_distributions import DiscreteSimulationDistribution
+from simulator.simulation_distributions import DiscreteSimulationDistribution
 from utils.utils_distribution import convertToRowMajor
 import numpy as np
 

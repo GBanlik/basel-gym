@@ -1,1 +1,2 @@
 from utils.utils_decorators import inputDecorators
+from utils.utils_distribution import convertToRowMajor

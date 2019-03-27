@@ -20,9 +20,9 @@ class SimulationDistributionBase(object):
         Returns
         -------
         np.nparray
-            for DiscreteSimulationDistribution objects
+            for DiscreteSimulationDistribution objects.
         Callable[[np.ndarray], float]
-            for ContinuousSimulationDistribution objects
+            for ContinuousSimulationDistribution objects.
         '''
         return self._dist
 

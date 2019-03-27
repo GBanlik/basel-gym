@@ -1,3 +1,5 @@
+import numpy as np
+
 from math import sqrt
 
 from basel_base import BaselBase
@@ -7,7 +9,6 @@ from gym import spaces
 
 from scipy.stats import norm
 from scipy.special import ndtr
-import numpy as np
 
 class BaselSimple(BaselBase):
     '''
