@@ -80,12 +80,14 @@ class BaselBase(gym.Env):
         self._EC_Max: int = 11
 
         self._kMultipliersListing = np.array([3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, np.inf])
+        self._kMultipliersRewardListing = np.array([0.01, 0.015, 0.02, 0.032, 0.037, 0.042, 0.0495, 0])
+        self._kMultipliersMaxIndex = len(self._kMultipliersListing) - 1 # performance optimizations
 
         self._normalVaR: float = norm.ppf(self._confidenceLevel, self._normalMean, self._normalStdDev)
         self._normalVaR10: float = - self._normalVaR * sqrt(10)
 
-        # Observation Variables
-        self._action_value : float = 0.0
+        # Environment state recording variables
+        self._is_bankrupt: bool = False # performance optimizations
         
         # Gym Configuration Section
         self.seed()
@@ -104,9 +106,9 @@ class BaselBase(gym.Env):
         self.action_value = self._getActionValue(action)
         self._updateEnvironment()
 
-        done = bool(self.state[0] == 0 or self._isBankrupt())
+        done = bool(self.state[0] == 0 or self._is_bankrupt)
         reward = self._computeReward()
-
+  
         return self._get_obs(), reward, done, {}
 
     def reset(self):
@@ -116,7 +118,7 @@ class BaselBase(gym.Env):
         return np.array(self.state)
 
     def _computeReward(self) -> float:
-        return -1 if self._isBankrupt() else (
+        return -1 if self._is_bankrupt else (
                 self.action_value * self._kMultipliersListing[self.state[2]] * self._normalVaR10)
 
     def _updateEnvironment(self) -> None:
@@ -126,7 +128,7 @@ class BaselBase(gym.Env):
         ec_number = state[1]
         k_mul = state[2]
 
-        if (not self._isBankrupt()):
+        if (not self._is_bankrupt):
             transitioned_event = self._getTransitionedEvent(ttob == 1)
 
             if (transitioned_event == EventTransition.EXCEEDANCE):
@@ -134,9 +136,10 @@ class BaselBase(gym.Env):
             elif (transitioned_event == EventTransition.BANKRUPTCY):
                 ec_number = self._EC_Max
                 k_mul = 7
+                self._is_bankrupt = True
 
         if (ec_number == self._EC_Max):
-            k_mul = len(self._kMultipliersListing) - 1
+            k_mul = self._kMultipliersMaxIndex
         elif (ttob == 1):
             k_mul = 0 if ec_number <= 4 else ec_number - 4
 
@@ -150,9 +153,6 @@ class BaselBase(gym.Env):
 
     def _getTransitionedEvent(self, isEndState: bool = False) -> EventTransition:
         raise NotImplementedError
-
-    def _isBankrupt(self) -> bool:
-        return self.state[2] == (len(self._kMultipliersListing) - 1)
 
     def _getActionValue(self, action: float) -> float:
         raise NotImplementedError
