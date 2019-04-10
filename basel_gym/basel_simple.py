@@ -21,16 +21,24 @@ class BaselSimple(BaselBase):
     def __init__(self, config):
         super().__init__(config)
 
-        self.action_space = spaces.Discrete(3000)
+        self.action_space = spaces.Discrete(300)
         self.observation_space = spaces.MultiDiscrete([250, (self._EC_Max + 1), len(self._kMultipliersListing)])
 
     def _getActionValue(self, action: float) -> float:
-        return action * 0.001
+        return action * 0.01
 
     def _computeReward(self) -> float:
-        return -1 if self._is_bankrupt else 0.00001 * (
-                self.action_value * self._kMultipliersListing[self.state[2]] * self._normalVaR10)
+        ttob = self.state[0]
+        kmul = self.state[2]
+        reward = 0.0
 
+        if(ttob == 0 and not self._is_bankrupt):
+            reward -= self._kMultipliersRewardListing[kmul]
+
+        reward += -1 if self._is_bankrupt else 0.00001 * (
+                self.action_value * self._kMultipliersListing[kmul] * self._normalVaR10)
+
+        return reward
 
     def reset(self):
         current_kmul_index = self.defaultMultiplierIndex if self.defaultMultiplierIndex is not None else self.np_random.randint(
