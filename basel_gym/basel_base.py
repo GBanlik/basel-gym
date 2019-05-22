@@ -71,7 +71,7 @@ class BaselBase(gym.Env):
 
         # User Configuration Section
         self.defaultMultiplierIndex = config.get("initial_multiplier_index", None)
-        self._useRandomEC: bool = config.get("use_random_ec", None)
+        self._useRandomEC: bool = config.get("use_random_ec", False)
 
         # Basel Configuration Section
         self._confidenceLevel: float = 0.99
@@ -79,7 +79,7 @@ class BaselBase(gym.Env):
         self._normalStdDev: float = 1
         self._EC_Max: int = 11
 
-        self._kMultipliersListing = np.array([3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, np.inf])
+        self._kMultipliersListing = np.array([3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, np.inf]) #-100
         self._kMultipliersRewardListing = np.array([0.01, 0.015, 0.02, 0.032, 0.037, 0.042, 0.0495, 0])
         self._kMultipliersMaxIndex = len(self._kMultipliersListing) - 1 # performance optimizations
 
@@ -118,8 +118,7 @@ class BaselBase(gym.Env):
         return np.array(self.state)
 
     def _computeReward(self) -> float:
-        return -1 if self._is_bankrupt else (
-                self.action_value * self._kMultipliersListing[self.state[2]] * self._normalVaR10)
+        raise NotImplementedError
 
     def _updateEnvironment(self) -> None:
         state = self.state
@@ -135,11 +134,11 @@ class BaselBase(gym.Env):
                 ec_number = min(ec_number + 1, self._EC_Max)
             elif (transitioned_event == EventTransition.BANKRUPTCY):
                 ec_number = self._EC_Max
-                k_mul = 7
-                self._is_bankrupt = True
+                k_mul = self._kMultipliersMaxIndex
 
         if (ec_number == self._EC_Max):
             k_mul = self._kMultipliersMaxIndex
+            self._is_bankrupt = True
         elif (ttob == 1):
             k_mul = 0 if ec_number <= 4 else ec_number - 4
 

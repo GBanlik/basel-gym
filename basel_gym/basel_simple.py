@@ -21,11 +21,14 @@ class BaselSimple(BaselBase):
     def __init__(self, config):
         super().__init__(config)
 
-        self.action_space = spaces.Discrete(300)
+        self.action_space = spaces.Discrete(3000)
         self.observation_space = spaces.MultiDiscrete([250, (self._EC_Max + 1), len(self._kMultipliersListing)])
 
+        self._useRandomEC = True
+        self._defaultMultiplierIndex = None
+
     def _getActionValue(self, action: float) -> float:
-        return action * 0.01
+        return action * 0.001
 
     def _computeReward(self) -> float:
         ttob = self.state[0]
@@ -46,6 +49,8 @@ class BaselSimple(BaselBase):
 
         initialECs = self.np_random.randint(0, self._EC_Max - 1) if self._useRandomEC else 0
         self.state = (250 - initialECs, initialECs , current_kmul_index)
+        
+        self._is_bankrupt = False
 
         return self._get_obs()
 
