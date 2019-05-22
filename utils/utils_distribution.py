@@ -11,4 +11,4 @@ def convertToRowMajor(observations: np.ndarray, shape: np.ndarray):
         [The shape of the distribution from which to retrieve actions]
     
     '''
-    return np.ravel_multi_index(observations.T, shape, order='C')
+    return np.ravel_multi_index(observations, shape, order='C')

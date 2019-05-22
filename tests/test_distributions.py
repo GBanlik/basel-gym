@@ -11,7 +11,9 @@ class TestDistributions(unittest.TestCase):
         dist: DiscreteSimulationDistribution = DiscreteSimulationDistribution()
         dist.distributionFunction = discrete_dist
 
-        #numpy's ravel_multi_index takes indices column-wise
+        # convertToRowMajor takes observations row-wise
+        # observations = [(0, 2), 
+        #                 (1,2)]
         lookup = np.array([[0,2],[1,2]])
         #row-major algorithm
         indices: np.ndarray = convertToRowMajor(lookup , discrete_dist.shape)

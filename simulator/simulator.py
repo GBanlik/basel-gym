@@ -4,9 +4,11 @@ import logging
 
 import numpy as np
 
-from simulator.simulation_distributions import SimulationDistributionBase
-from simulator.simulation_monitor import SimulationMonitorBase
-from simulator.simulation_profile import SimulationProfileBase
+from scipy.stats.distributions import norm
+
+from simulator.distribution.distribution_base import SimulationDistributionBase
+from simulator.monitor.monitor_base import SimulationMonitorBase
+from simulator.profile.profile_base import SimulationProfileBase
 from utils.utils_decorators import inputDecorators
 
 logging.basicConfig(format='%(asctime)s-%(process)d-%(levelname)s-%(messages)s', level=logging.INFO)
@@ -33,6 +35,11 @@ class MonteCarloSimulator(object):
         self._num_years_per_sim = config.get("simulation_years", 30)
         self._trading_days_order = config.get("day_order", "A")
 
+        return_dist_config = config.get("returns_distribution", None)
+
+        self._ret_dist_mean = return_dist_config.get("mean", 0)
+        self._ret_dist_std = return_dist_config.get("std", 1)
+
         # Holds simulation profiles
         self._simulation_profiles: Dict[str, SimulationProfileBase] = {}
 
@@ -40,7 +47,7 @@ class MonteCarloSimulator(object):
         self._is_running: bool = False
 
     def startSimulation(self) -> bool:
-        if self.isRunning():
+        if self.is_running():
             logging.info(self.__class__.__name__, ":startSimulation already in progress.")
             return False
 
@@ -50,21 +57,24 @@ class MonteCarloSimulator(object):
         if len(self._simulation_profiles) == 0:
             return False
 
+        days_range: range = range(0, (self._num_trading_days), 1) if self._trading_days_order == "A" \
+            else range(self._num_trading_days -1, -1, -1)
+
         for sim_num in range(self.simulations_number):
             logging.debug(self.__class__.__name__, 'Starting simulation {}'.format(sim_num))
 
-            for day in range(self._num_trading_days, 0, -1):
-                daily_return = np.random.rand(self._num_years_per_sim)
+            for day in days_range:
+                daily_return = norm.ppf(np.random.rand(self._num_years_per_sim), self._ret_dist_mean, self._ret_dist_std)
+                done = day == days_range[-1]
 
                 for profile_name, profile in self._simulation_profiles.items():
                     logging.debug(self.__class__.__name__, ": Simulating profile {}".format(profile_name))
 
-                    done = day == 1
                     profile.performTransition(daily_return, (sim_num, day, done))
 
         return True
 
-    def addSimulationProfile(self, name: str, sim_profile: SimulationProfileBase) -> bool:
+    def addSimulationProfile(self, name: str, sim_profile: Type[SimulationProfileBase]) -> bool:
         if not issubclass(sim_profile.__class__, SimulationProfileBase):
             logging.error(self.__class__.__name__, ":addSimulationProfile Invalid profile class {} . ".format(sim_profile.__name__))
 
@@ -73,10 +83,10 @@ class MonteCarloSimulator(object):
         else:
             logging.error(self.__class__.__name__, ":addSimulationProfile Duplicate simulation profile {} . ".format(name))
     
-    def removeSimulationProfile(self, profile_name :str) -> SimulationProfileBase:
+    def removeSimulationProfile(self, profile_name :str) -> Type[SimulationProfileBase]:
         return self._simulation_profiles.pop(profile_name, None)
     
-    def createAndAddSimulationProfile(self, name:str, profile_class: Type[SimulationProfileBase], sim_dist: SimulationDistributionBase, monitor: SimulationMonitorBase = SimulationMonitorBase()) -> SimulationProfileBase:
+    def createAndAddSimulationProfile(self, name:str, profile_class: Type[SimulationProfileBase], sim_dist: Type[SimulationDistributionBase], monitor: Type[SimulationMonitorBase]) -> Type[SimulationProfileBase]:
         '''
         Creates a new profile and adds it to the MonteCarloSimulator instance stack.
         
@@ -96,7 +106,6 @@ class MonteCarloSimulator(object):
         SimulationProfileBase
             The created object if succesfully created, None otherwise.
         '''
-
 
         if not issubclass(profile_class, SimulationProfileBase):
             logging.error(self.__class__.__name__, ":addSimulationProfile Invalid profile class {} . ".format(sim_dist.__name__))
@@ -158,5 +167,5 @@ class MonteCarloSimulator(object):
 
         self._simulations_number = amount
 
-    def isRunning(self) -> bool:
+    def is_running(self) -> bool:
         return self._is_running
