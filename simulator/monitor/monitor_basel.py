@@ -56,26 +56,27 @@ class BaselSimulationMonitor(SimulationMonitorBase):
     
             # pre-allocate space for yearly records
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.EXCEEDENCES] = \
-                np.zeros(observation_dims)
-            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.BANKRUPTCY] = \
-                np.zeros(observation_dims)
+                np.zeros(observation_dims, dtype=int)
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.DISCLOSURE_YEAR_MEAN] = \
-                np.zeros(observation_dims)
+                np.zeros(observation_dims, dtype=float)
+
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.BANKRUPTCY] = \
+                np.zeros(obs_dims_extended, dtype=int)
             # extended to accomodate reviewed following year
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.KMULTIPLIERS_VALUE] = \
-                np.zeros(obs_dims_extended)
+                np.full(shape=obs_dims_extended, fill_value=3.0, dtype=float)
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.KMULTIPLIERS_INDECES] = \
-                np.zeros(obs_dims_extended)
+                np.zeros(obs_dims_extended, dtype=int)
                 
             # pre-allocate space for daily records for yearly averaging purposes
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.DISCLOSURE] = \
-                np.zeros(daily_disclosure_dims)
+                np.zeros(daily_disclosure_dims, dtype=float)
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.RETURN_DAILY] = \
-                np.zeros(daily_disclosure_dims)
+                np.zeros(daily_disclosure_dims, dtype=float)
             
             # yearly statistics
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.RETURN_YEAR] = \
-                np.zeros(observation_dims)
+                np.zeros(observation_dims, dtype=float)
         else:
             raise ValueError(self.__class__.__name__, ":__init__ Missing configuration for ", "basel_records")
     

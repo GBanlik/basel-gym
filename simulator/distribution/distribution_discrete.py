@@ -47,4 +47,5 @@ class DiscreteSimulationDistribution(SimulationDistributionBase):
             An array of actions for each observation (order is preserved).
         '''
         indices = convertToRowMajor(observation, self._dist.shape)
+ 
         return self._dist_raveled[indices]
