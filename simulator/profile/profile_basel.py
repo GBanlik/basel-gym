@@ -29,23 +29,27 @@ class BaselSimulationProfile(SimulationProfileBase):
         if not config_dist is None:
             self._confidence_level = config_dist.get("confidence_level", self._confidence_level)
             self._normal_mean = config_dist.get("mean", self._normal_mean)
-            self._normal_stddev = config_dist.get("std", self._normal_stddev)       
+            self._normal_stddev = config_dist.get("std", self._normal_stddev)    
 
         self._normal_var: float = config.get("normal_var", norm.ppf(self._confidence_level, self._normal_mean, self._normal_stddev))
         self._normal_var10: float = config.get("normal_var10", -self._normal_var * sqrt(10))
         # the maximum allowed reported/disclosued value
         self._max_report_value = config.get("max_report_value", 3)
-        print(self._confidence_level, self._normal_mean, self._normal_stddev, self._normal_var)
+  
         self._k_multipliers: np.ndarray = np.array([
             [3, 3, 3, 3, 3, 3.4, 3.5, 3.65, 3.75, 3.85, 4, 10000],
             [0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7]])
 
+        self._fixed_daily_return: int = 6/100/250
+
     def performTransition(self, daily_return: np.ndarray, sim_state: np.ndarray) -> None:
         monitor: BaselSimulationMonitor = self._monitor
-        sim_num = sim_state[0]
-        day = sim_state[1]
-        done = sim_state[2]
-        basel_record_categories = BaselSimulationMonitor.BaselRecordCategory
+        sim_num: int = sim_state[0]
+        day: int = sim_state[1]
+        done: bool = sim_state[2]
+        basel_record_categories: Type[Enum] = BaselSimulationMonitor.BaselRecordCategory
+        
+        asset_price: float = 1
 
         # pointers to cleanup the code
         rc_kmul_idx = basel_record_categories.KMULTIPLIERS_INDECES
@@ -59,6 +63,7 @@ class BaselSimulationProfile(SimulationProfileBase):
         current_k_idx: np.array = fetch_record(rc_kmul_idx, sim_num)
         current_k: np.array = fetch_record(rc_kmul_value, sim_num)
         current_ecs: np.array = fetch_record(rc_ec, sim_num)
+
         # fetch the previous' period's bankruptcy state, as its a permanent state
         bankruptcy: np.array = monitor.record(rc_bk)[sim_num]
                 
@@ -75,12 +80,17 @@ class BaselSimulationProfile(SimulationProfileBase):
         disclosure[current_ecs == 10] = self._max_report_value
 
         reported_value: np.array =  disclosure * self._normal_var
-        #increment day to reject is null record
-        reported_mean = np.ones(shape=(disclosure_history[0].shape), dtype=float) if \
-            day == 249 else disclosure_history[(day+1):].mean(axis=0)
-        #print(reported_value, disclosure, self._normal_var)
+        # record the disclosed amount prematurely so its accounted for in the average vars
+        monitor.addRecord(category_key=basel_record_categories.DISCLOSURE, record=reported_value, record_key=day)
+  
+        # reverse disclosure history to get the last (250-day) records, as they are disclosed first~
+        # given that time goes backwards (250->0)
+        reported_mean = disclosure_history[-1:(day-251):-1, :].mean(axis=0)
+
+        mrc_period: np.array = reported_mean.T * current_k * SQRT_10
+
         #BC = MRC is below the loss, MRC = mean(last_60_disclosure) * kMul * sqrt(10)
-        bankruptcy += (reported_mean.T * current_k * SQRT_10 < daily_return)
+        bankruptcy += (mrc_period < daily_return)
         bankruptcy = np.minimum(bankruptcy, 1)
 
         # EC = return < disclosure , -100 for bankruptcy states
@@ -95,10 +105,11 @@ class BaselSimulationProfile(SimulationProfileBase):
         monitor.record(rc_ec)[sim_num] = current_ecs
         monitor.record(rc_bk)[sim_num] = bankruptcy
 
-        #TODO Add the portfolio's invested amount / return
+        monitor.record(basel_record_categories.MRC_DAILY)[day] = mrc_period
         # the invested amount corresponds to the portfolio + mrc in proportion
-        monitor.record(basel_record_categories.RETURN_DAILY)[day] = daily_return
-        monitor.addRecord(category_key=basel_record_categories.DISCLOSURE, record=disclosure, record_key=day)
+        monitor.record(basel_record_categories.PORTFOLIO_INVESTEMENT_DAILY)[day] = 100000 / mrc_period * asset_price
+
+        monitor.addRecord(category_key=basel_record_categories.ACTION, record=disclosure, record_key=day)
 
         if(done):
             #review the k Multiplier applicable on the following year
@@ -110,11 +121,23 @@ class BaselSimulationProfile(SimulationProfileBase):
             monitor.record(rc_bk)[sim_num+1] = bankruptcy
 
             # store the year's average disclosure
-            monitor.record(basel_record_categories.DISCLOSURE_YEAR_MEAN)[sim_num] = reported_mean
+            monitor.record(basel_record_categories.DISCLOSURE_ANNUAL_MEAN)[sim_num] = reported_mean
 
-            # store the year's average return
-            avg_return: np.array = monitor.record(basel_record_categories.RETURN_DAILY).mean(axis=0)
-            monitor.record(basel_record_categories.RETURN_YEAR)[sim_num] = avg_return
+            # store the year's average mrc
+            monitor.record(basel_record_categories.MRC_ANNUAL)[sim_num] = monitor.record(basel_record_categories.MRC_DAILY).mean(axis=0)
             
+            # review the investment amount considering a fixed daily return equal to 6%
+            daily_investment: np.array = monitor.record(basel_record_categories.PORTFOLIO_INVESTEMENT_DAILY)
+            annual_investment_avg: np.array =  daily_investment[:day+1,:].mean(axis=0)
+            monitor.addRecord(basel_record_categories.PORTFOLIO_INVESTMENT_ANNUAL_AVG, annual_investment_avg, sim_num)
+
+            # review the portfolio's return
+            annual_return: np.array = np.sum(daily_investment[:day+1,:] * asset_price * self._fixed_daily_return, axis=0)
+            monitor.addRecord(basel_record_categories.RETURN_ANNUAL,  annual_return, sim_num)
+
+            # the effective annual return
+            monitor.record(basel_record_categories.RETURN_EFFECTIVE_ANNUAL)[sim_num] = annual_return / annual_investment_avg
+
+
 
         

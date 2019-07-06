@@ -8,6 +8,8 @@ class BaselSimulationMonitor(SimulationMonitorBase):
 
     @unique
     class BaselRecordCategory(Enum):
+        # The selected disclose percentage
+        ACTION = auto(),
         # Last 60-day reported VaRs
         DISCLOSURE = auto(),
         # Exceedence map per simulation
@@ -19,11 +21,19 @@ class BaselSimulationMonitor(SimulationMonitorBase):
         # Bankruptcy map per year per simulationID
         BANKRUPTCY = auto(),
         # The yearly average disclosed value
-        DISCLOSURE_YEAR_MEAN = auto(),
-        # The daily return as provided by the simulator, per year
-        RETURN_DAILY = auto(),
-        # Return map per year per simulationID,
-        RETURN_YEAR = auto(),
+        DISCLOSURE_ANNUAL_MEAN = auto(),
+        # The daily MRC
+        MRC_DAILY = auto(),
+        # The yearly MRC, as an average of the daily MRC
+        MRC_ANNUAL = auto(),
+        # Return map per year per simulationID
+        RETURN_ANNUAL = auto(),
+        # Effective return map per year,
+        RETURN_EFFECTIVE_ANNUAL = auto(),
+        # Return map per day per year
+        PORTFOLIO_INVESTEMENT_DAILY = auto(),
+        # Return map per year per simulationID
+        PORTFOLIO_INVESTMENT_ANNUAL_AVG = auto(),
     
     def __init__(self, config: dict):
         super().__init__(config)
@@ -53,30 +63,45 @@ class BaselSimulationMonitor(SimulationMonitorBase):
             # expand the dim's 0 dimension (simulations) to accomodate the additional revised multiplier
             obs_dims_extended = (observation_dims[0] +1, ) + observation_dims[1:]
             daily_disclosure_dims = obs_config.get("daily_disclosure_record_shape", 0)
-    
+
+            #### Yearly Records ####
+
             # pre-allocate space for yearly records
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.EXCEEDENCES] = \
                 np.zeros(observation_dims, dtype=int)
-            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.DISCLOSURE_YEAR_MEAN] = \
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.DISCLOSURE_ANNUAL_MEAN] = \
                 np.zeros(observation_dims, dtype=float)
-
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.BANKRUPTCY] = \
                 np.zeros(obs_dims_extended, dtype=int)
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.MRC_ANNUAL] = \
+                np.zeros(observation_dims, dtype=float)
+
+            # yearly statistics
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.RETURN_ANNUAL] = \
+                np.zeros(observation_dims, dtype=float)
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.RETURN_EFFECTIVE_ANNUAL] = \
+                np.zeros(observation_dims, dtype=float)
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.PORTFOLIO_INVESTMENT_ANNUAL_AVG] = \
+                np.zeros(observation_dims, dtype=float)
+
             # extended to accomodate reviewed following year
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.KMULTIPLIERS_VALUE] = \
                 np.full(shape=obs_dims_extended, fill_value=3.0, dtype=float)
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.KMULTIPLIERS_INDECES] = \
                 np.zeros(obs_dims_extended, dtype=int)
-                
+            
+            #### Daily Records ####
+
             # pre-allocate space for daily records for yearly averaging purposes
             self._generic_records[BaselSimulationMonitor.BaselRecordCategory.DISCLOSURE] = \
                 np.zeros(daily_disclosure_dims, dtype=float)
-            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.RETURN_DAILY] = \
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.PORTFOLIO_INVESTEMENT_DAILY] = \
+                np.zeros(daily_disclosure_dims, dtype=float)
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.ACTION] = \
+                np.zeros(daily_disclosure_dims, dtype=float)
+            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.MRC_DAILY] = \
                 np.zeros(daily_disclosure_dims, dtype=float)
             
-            # yearly statistics
-            self._generic_records[BaselSimulationMonitor.BaselRecordCategory.RETURN_YEAR] = \
-                np.zeros(observation_dims, dtype=float)
         else:
             raise ValueError(self.__class__.__name__, ":__init__ Missing configuration for ", "basel_records")
     

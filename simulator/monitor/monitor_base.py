@@ -33,6 +33,7 @@ class SimulationMonitorBase(object):
 
         if obs_config:
             initial_observation_dims = obs_config.get("record_shape", 0)
+
             self._generic_records[SimulationMonitorBase.RecordBaseCategory.OBSERVATIONS] = \
                 np.zeros(initial_observation_dims)
         else:
@@ -57,7 +58,7 @@ class SimulationMonitorBase(object):
         if(record is None):
             raise ValueError("SimulationMonitorBase:addRecord Invalid record.")
 
-        record_book: np.array = self._generic_records[category_key]
+        record_book: np.array = self.record(category_key)
 
         if(flush):
             record_book.fill(0)
@@ -115,16 +116,13 @@ class SimulationMonitorBase(object):
         Returns
         -------
         None
-        """
-        if not out_name:
-            raise ValueError(self.__class__.__name__, ":dump invalid output file name.")
-        
+        """        
         if not category_key or category_key is None:
-            raise ValueError(self.__class__.__name__, ":dump category_key (", category_key ,") not found.")
-
-        records = self._generic_records[category_key]
-
-        if not records is None:
-            records.savetxt(out_name, records, delimiter)
+            np.savetxt(out_name, self._generic_records[SimulationMonitorBase.RecordBaseCategory.OBSERVATIONS], delimiter)
         else:
-            raise ValueError(self.__class__.__name__, ":dump category_key (", category_key ,") not found.")
+            records = self._generic_records[category_key]
+
+            if not records is None:
+                np.savetxt(out_name, records, delimiter=delimiter)
+            else:
+                raise ValueError(self.__class__.__name__, ":dump category_key (", category_key ,") not found.")
