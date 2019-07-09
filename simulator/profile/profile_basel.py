@@ -77,7 +77,7 @@ class BaselSimulationProfile(SimulationProfileBase):
         disclosure: np.array = self.distribution.getAction(env_obs)
 
         #bankrupt states should always report the maximum value so as to avoid bankruptcy
-        disclosure[current_ecs == 10] = self._max_report_value
+        disclosure[current_ecs == 11] = self._max_report_value
 
         reported_value: np.array =  disclosure * self._normal_var
         # record the disclosed amount prematurely so its accounted for in the average vars
